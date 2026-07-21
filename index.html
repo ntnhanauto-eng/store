@@ -1,1 +1,286 @@
-test
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kho Lưu Trữ & Chia Sẻ Dữ Liệu Admin</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
+        .store-container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .store-header { border-bottom: 2px solid #6c757d; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        .msg-toast { padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: 600; display: none; transition: all 0.3s ease; }
+        .msg-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .msg-error { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        
+        .upload-form, .text-share-form { background-color: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 25px; }
+        .form-row { display: flex; flex-direction: column; gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #495057; }
+        input[type="file"], textarea { padding: 10px; background: #fff; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px; width: 100%; }
+        textarea { resize: vertical; min-height: 120px; font-family: monospace; font-size: 14px; line-height: 1.5; }
+        
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { border: none; padding: 12px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .btn-submit { background-color: #4b5563; color: white; }
+        .btn-submit:hover { background-color: #374151; }
+        .btn-copy { background-color: #10b981; color: white; }
+        .btn-copy:hover { background-color: #059669; }
+        .btn-del { background-color: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; width: 100%; margin-top: 8px; }
+        .btn-del:hover { background-color: #dc2626; }
+        
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-top: 15px; }
+        .image-item { background: #fdfdfd; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; }
+        .image-wrapper { width: 100%; height: 130px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f3f4f6; border-radius: 6px; margin-bottom: 8px; }
+        .image-wrapper img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .image-info { font-size: 11px; color: #4b5563; word-break: break-all; margin-top: 4px; line-height: 1.2; text-align: left; }
+    </style>
+
+    <!-- Khai báo thư viện Firebase v9 Compat (chạy mượt trên GitHub Pages) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div class="store-container">
+    <div class="store-header">
+        <h2>🖼️ KHO LƯU TRỮ & CHIA SẺ DỮ LIỆU ADMIN</h2>
+        <p style="color: #6b7280; margin: 0; font-size: 14px;">Đồng bộ nhanh hình ảnh và văn bản tạm thời giữa Máy tính & Điện thoại.</p>
+    </div>
+
+    <!-- Thông báo hệ thống -->
+    <div id="statusMsg" class="msg-toast"></div>
+
+    <!-- 1. BỘ NHỚ TẠM CHUNG (TEXT) -->
+    <div class="text-share-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label>📋 BỘ NHỚ TẠM CHUNG (Nhập text từ thiết bị này -> Click Lưu -> Tự đồng bộ qua thiết bị khác)</label>
+                <textarea id="sharedContent" placeholder="Dán đoạn văn bản hoặc liên kết cần chia sẻ vào đây..."></textarea>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-submit" onclick="saveText()">💾 LƯU VÀ CHIA SẺ TEXT</button>
+                <button type="button" class="btn btn-copy" onclick="copyToClipboard()">✂️ COPY NHANH TEXT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. UPLOAD HÌNH ẢNH -->
+    <div class="upload-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Chọn hình ảnh từ thiết bị (Tối đa 5 ảnh mỗi lần. Định dạng: JPG, PNG, GIF, WEBP)</label>
+                <input type="file" id="imageInput" accept="image/*" multiple>
+            </div>
+            <button type="button" class="btn btn-submit" onclick="uploadImages()" style="width: fit-content;">TẢI ẢNH LÊN HỆ THỐNG</button>
+        </div>
+    </div>
+
+    <h3>Danh sách hình ảnh trong kho</h3>
+    <div id="imageGrid" class="image-grid">
+        <!-- Ảnh sẽ tự động được render vào đây -->
+    </div>
+</div>
+
+<script>
+// =========================================================================
+// BƯỚC CẤU HÌNH API: THAY CÁC THÔNG SỐ CỦA BẠN VÀO ĐÂY ĐỂ WEB HOẠT ĐỘNG
+// =========================================================================
+
+// 1. Cấu hình Firebase (Lấy tại: Console Firebase -> Project Settings)
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// 2. Cấu hình Cloudinary (Lấy tại Dashboard Cloudinary)
+const CLOUDINARY_CLOUD_NAME = "YOUR_CLOUD_NAME"; 
+const CLOUDINARY_UPLOAD_PRESET = "YOUR_UPLOAD_PRESET"; // Chọn loại Unsigned
+
+// Khởi tạo Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// =========================================================================
+// XỬ LÝ LƯU & ĐỒNG BỘ TEXT REALTIME
+// =========================================================================
+
+// Lắng nghe biến đổi dữ liệu text từ Cloud (Mở trên điện thoại sẽ tự động nhảy text từ PC)
+db.ref('shared_clipboard').on('value', (snapshot) => {
+    const val = snapshot.val();
+    if (val !== null) {
+        document.getElementById('sharedContent').value = val;
+    }
+});
+
+// Hàm Lưu text lên Database
+function saveText() {
+    const textContent = document.getElementById('sharedContent').value;
+    db.ref('shared_clipboard').set(textContent)
+        .then(() => {
+            showToast("Đã lưu và đồng bộ văn bản thành công!", "success");
+        })
+        .catch((err) => {
+            showToast("Lỗi khi lưu dữ liệu: " + err.message, "error");
+        });
+}
+
+// Hàm Sao chép nhanh
+function copyToClipboard() {
+    const copyText = document.getElementById("sharedContent");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // Hỗ trợ điện thoại
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            alert("Đã sao chép văn bản thành công!");
+        }).catch(() => {
+            alert("Lỗi sao chép tự động. Hãy bôi đen thủ công.");
+        });
+    } else {
+        document.execCommand('copy');
+        alert("Đã sao chép văn bản!");
+    }
+}
+
+// =========================================================================
+// XỬ LÝ UPLOAD & HÌNH ẢNH
+// =========================================================================
+
+async function uploadImages() {
+    const fileInput = document.getElementById('imageInput');
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        showToast("Vui lòng chọn ít nhất một file ảnh hợp lệ.", "error");
+        return;
+    }
+    if (files.length > 5) {
+        showToast("Bạn chỉ được phép tải lên tối đa 5 hình ảnh cùng một lúc.", "error");
+        return;
+    }
+
+    showToast("Đang tải ảnh lên Cloud, vui lòng chờ...", "success");
+
+    let successCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+        try {
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (data.secure_url) {
+                // Lưu metadata của ảnh vào Firebase Database
+                const newImgRef = db.ref('uploaded_images').push();
+                await newImgRef.set({
+                    url: data.secure_url,
+                    name: file.name,
+                    size: formatFileSize(file.size),
+                    time: Date.now()
+                });
+                successCount++;
+            }
+        } catch (err) {
+            console.error("Lỗi upload file:", file.name, err);
+        }
+    }
+
+    fileInput.value = ''; // Reset khung chọn ảnh
+    if (successCount > 0) {
+        showToast(`Đã tải lên thành công ${successCount} hình ảnh!`, "success");
+    } else {
+        showToast("Tải ảnh thất bại. Kiểm tra lại cấu hình API Cloudinary.", "error");
+    }
+}
+
+// Lắng nghe danh sách ảnh từ Firebase để render ra màn hình
+db.ref('uploaded_images').on('value', (snapshot) => {
+    const imageGrid = document.getElementById('imageGrid');
+    imageGrid.innerHTML = '';
+    
+    const data = snapshot.val();
+    if (data) {
+        // Sắp xếp ảnh mới nhất lên đầu
+        const keys = Object.keys(data).reverse();
+        keys.forEach(key => {
+            const img = data[key];
+            const dateStr = new Date(img.time).toLocaleString('vi-VN');
+            
+            const itemHtml = `
+                <div class="image-item">
+                    <div class="image-wrapper">
+                        <a href="${img.url}" target="_blank" title="Xem ảnh gốc">
+                            <img src="${img.url}" alt="${escapeHtml(img.name)}">
+                        </a>
+                    </div>
+                    <div class="image-info">
+                        <strong>${escapeHtml(img.name)}</strong><br>
+                        <span>📦 ${img.size || ''}</span><br>
+                        <span>📅 ${dateStr}</span>
+                    </div>
+                    <button type="button" class="btn-del" onclick="deleteImage('${key}')">Xóa ảnh</button>
+                </div>
+            `;
+            imageGrid.innerHTML += itemHtml;
+        });
+    } else {
+        imageGrid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; color: #9ca3af; padding: 40px 0; border: 1px dashed #dee2e6; border-radius: 8px;">
+                Chưa có hình ảnh nào trong thư mục lưu trữ.
+            </div>`;
+    }
+});
+
+// Hàm xóa ảnh
+function deleteImage(key) {
+    if (confirm("Bạn có chắc chắn muốn xóa hình ảnh này vĩnh viễn?")) {
+        db.ref('uploaded_images/' + key).remove()
+            .then(() => {
+                showToast("Đã xóa hình ảnh thành công!", "success");
+            })
+            .catch((err) => {
+                showToast("Lỗi khi xóa: " + err.message, "error");
+            });
+    }
+}
+
+// =========================================================================
+// HÀM BỔ TRỢ HỆ THỐNG
+// =========================================================================
+
+function showToast(msg, type) {
+    const el = document.getElementById('statusMsg');
+    el.innerText = msg;
+    el.className = 'msg-toast ' + (type === 'success' ? 'msg-success' : 'msg-error');
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function formatFileSize(bytes) {
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+    if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return bytes + ' bytes';
+}
+
+function escapeHtml(text) {
+    return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+}
+</script>
+
+</body>
+</html>
