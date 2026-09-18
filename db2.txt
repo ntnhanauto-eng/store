@@ -1,9 +1,8 @@
 <?php
 define('DB_HOST', 'localhost');
-define('DB_USER', 'nacwxjyg_quanlyxe'); // Thay bằng tên user database của bạn
-define('DB_PASS', 'xvFy4bGBK3NVQtFZzRHx'); // Thay bằng mật khẩu database
-define('DB_NAME', 'nacwxjyg_quanlyxe'); // Thay bằng tên database
-
+define('DB_USER', 'ten_database_cua_ban'); // Thay bằng user DB của bạn trên 123host
+define('DB_PASS', 'matkhau_database_cua_ban'); // Thay bằng mật khẩu DB
+define('DB_NAME', 'ten_database_cua_ban'); // Thay bằng tên database
 
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
