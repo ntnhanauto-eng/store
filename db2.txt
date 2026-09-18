@@ -1,9 +1,13 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'nacwxjyg_quanlyxe'); // Thay bằng tên user database của bạn
-define('DB_PASS', 'xvFy4bGBK3NVQtFZzRHx'); // Thay bằng mật khẩu database
-define('DB_NAME', 'nacwxjyg_quanlyxe'); // Thay bằng tên database
+// Bật hiển thị lỗi trên trình duyệt để dễ kiểm tra
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
+define('DB_HOST', 'localhost');
+define('DB_USER', 'ten_database_cua_ban'); // Thay bằng user database thực tế của bạn trên 123host
+define('DB_PASS', 'matkhau_database_cua_ban'); // Thay bằng mật khẩu database
+define('DB_NAME', 'ten_database_cua_ban'); // Thay bằng tên database
 
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
@@ -13,12 +17,6 @@ try {
 }
 
 if (session_status() === PHP_SESSION_NONE) {
-    // Cố định thư mục lưu session trên server để tránh bị mất phiên đăng nhập khi POST form
-    $session_path = __DIR__ . '/sessions';
-    if (!file_exists($session_path)) {
-        mkdir($session_path, 0777, true);
-    }
-    session_save_path($session_path);
     session_start();
 }
 ?>
